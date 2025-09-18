@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title> Jornada de Talentos: O Desafio dos Segmentos – Senac</title>
+  <title>Jornada de Talentos: O Desafio dos Segmentos – Senac</title>
   <style>
     :root{
       --bg:#0f172a;
@@ -22,7 +22,7 @@
       --bad: #ef4444;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
+    html,body{height:100%; overflow: hidden;} /* Impede o scroll da página enquanto arrasta no mobile */
     body{
       margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
       background-color: var(--bg);
@@ -70,53 +70,63 @@
     .drag-item {
         background: var(--card); color: var(--text); padding: 12px 16px;
         border-radius: 8px; cursor: grab; border: 1px solid rgba(255,255,255,.1);
-        text-align: center; transition: .2s; user-select: none;
+        text-align: center; transition: background-color .2s, border-color .2s, opacity .2s; user-select: none;
         display: flex; align-items: center; justify-content: center; gap: 8px; font-size:15px;
     }
     .drag-item:hover { transform: scale(1.03); border-color: white; }
-    .drag-item.dragging { opacity: 0.5; cursor: grabbing; }
+    
+    /* NOVO: Estilo para o item sendo arrastado (tanto no mouse quanto no toque) */
+    .drag-item.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+    
+    /* NOVO: Estilo específico para o item sendo arrastado com o dedo (touch) */
+    .drag-item.touch-dragging {
+        position: fixed; /* Permite que o elemento flutue sobre a página */
+        z-index: 2000; /* Garante que fique na frente de tudo */
+        pointer-events: none; /* Impede que o próprio item interfira na detecção do 'alvo' abaixo dele */
+        transform: scale(1.05); /* Efeito de 'levantar' o item */
+    }
 
     #drop-targets { width: 65%; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .drop-target {
-        /* Estilos base para todas as caixas de destino */
         border: 2px dashed var(--muted);
         border-radius: 12px; 
         padding: 16px; 
-        min-height: 150px; /* Aumentei a altura mínima para a imagem aparecer melhor */
+        min-height: 150px;
         transition: background-color .3s, border-color .3s;
-        position: relative; /* Necessário para o overlay */
-        overflow: hidden; /* Garante que o overlay não vaze */
-        display: flex; /* Para centralizar o conteúdo */
+        position: relative;
+        overflow: hidden;
+        display: flex;
         flex-direction: column;
         justify-content: center;
         background-size: cover;
         background-position: center;
     }
     
-    /* NOVO: Overlay para escurecer a imagem e garantir a leitura do texto */
     .drop-target::before {
         content: '';
         position: absolute;
         top: 0; left: 0;
         width: 100%; height: 100%;
-        background-color: rgba(0, 0, 0, 0.5); /* Overlay preto com 50% de opacidade */
-        z-index: 1; /* Fica entre o fundo e o texto */
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1;
     }
 
     .drop-target h4 {
         margin: 0; 
         text-align: center; 
-        font-size: 18px; /* Aumentei a fonte para melhor leitura */
+        font-size: 18px;
         pointer-events: none;
         display: flex; align-items: center; justify-content: center; gap: 8px;
-        position: relative; /* Garante que o texto fique sobre o overlay */
+        position: relative;
         z-index: 2;
-        color: white; /* Cor do texto branca para contrastar com o fundo */
-        text-shadow: 0 2px 4px rgba(0,0,0,0.7); /* Sombra para o texto */
+        color: white;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.7);
     }
     .drop-target h4 span { font-size: 20px; }
 
-    /* NOVO: Imagens de fundo aplicadas a cada área específica */
     #target-gestao  { background-image: url('gestao.png'); }
     #target-ti      { background-image: url('ti.png'); }
     #target-saude   { background-image: url('saude.png'); }
@@ -124,7 +134,6 @@
     #target-turismo { background-image: url('turismo.png'); }
     #target-artes   { background-image: url('artes.png'); }
 
-    /* Estilos de feedback (drag-over, correct, wrong) */
     .drop-target.drag-over { border-style: solid; }
     #target-gestao.drag-over { border-color: var(--gestao); }
     #target-ti.drag-over { border-color: var(--ti); }
@@ -134,7 +143,7 @@
     #target-artes.drag-over { border-color: var(--artes); }
     
     .drop-target.correct::before, .drop-target.wrong::before {
-        background-color: rgba(0, 0, 0, 0.3); /* Diminui o overlay no feedback */
+        background-color: rgba(0, 0, 0, 0.3);
     }
     .drop-target.correct { border: 3px solid var(--saude); background-color: rgba(34,197,94,.2); }
     .drop-target.wrong { border: 3px solid var(--bad); background-color: rgba(239,68,68,.2); }
@@ -158,7 +167,6 @@
 </head>
 <body>
   <div class="app">
-    
     <div class="card" id="view-start">
       <img src="logo-senac.png" alt="Logo Senac" class="logo-senac">
       <div class="title">Jornada de Talentos: O Desafio dos Segmentos</div>
@@ -168,7 +176,6 @@
         <button class="btn show-tips" id="btn-tips">Como Jogar?</button>
       </div>
     </div>
-
     <div class="modal-overlay" id="modal-tips">
         <div class="modal-content">
             <h3>Como Jogar?</h3>
@@ -176,13 +183,12 @@
             <ul>
                 <li>Na esquerda, você verá uma lista de atividades.</li>
                 <li>Na direita, estarão as áreas de conhecimento do Senac.</li>
-                <li><strong>Clique e arraste</strong> cada atividade para dentro da caixa da área correspondente.</li>
+                <li><strong>Clique e arraste</strong> (ou <strong>toque e arraste</strong> no celular) cada atividade para a caixa da área correspondente.</li>
                 <li>Quando terminar, clique em "Conferir" para ver seu resultado!</li>
             </ul>
             <button class="btn start-game" id="btn-close-modal">Entendi, vamos lá!</button>
         </div>
     </div>
-
     <div class="card" id="view-game">
         <div class="title">Organize as Atividades</div>
         <div class="subtitle">Arraste cada item para sua respectiva área.</div>
@@ -195,7 +201,6 @@
             <button class="btn btn-check" id="btn-check">Conferir</button>
         </div>
     </div>
-
     <div class="card" id="view-result">
       <div class="title">Seu Resultado</div>
       <div id="result-summary"></div>
@@ -218,7 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
         turismo: { title: 'Turismo e Hospitalidade', color: 'var(--turismo)', courses: ['Recepcionista de Hotel','Organizador de Eventos','Garçom'] },
         artes: { title: 'Artes e Design', color: 'var(--artes)', courses: ['Design Gráfico','Fotografia','Edição de Vídeo'] }
     };
-
     const GAME_ITEMS = [
         { text: '📊 Organizar planilhas', target: 'gestao' }, { text: '💰 Controlar o caixa', target: 'gestao' }, { text: '🤝 Liderar uma equipe', target: 'gestao' },
         { text: '💻 Criar um App', target: 'ti' }, { text: '🛡️ Proteger redes', target: 'ti' }, { text: '👨‍💻 Escrever código', target: 'ti' },
@@ -228,14 +232,12 @@ document.addEventListener('DOMContentLoaded', () => {
         { text: '🎨 Editar uma foto', target: 'artes' }, { text: '🖼️ Criar uma logomarca', target: 'artes' }, { text: '🎬 Gravar um vídeo', target: 'artes' }
     ];
 
-    // Mapeamento de Elementos
     const viewStart = document.getElementById('view-start'), viewGame = document.getElementById('view-game'), viewResult = document.getElementById('view-result');
     const modalTips = document.getElementById('modal-tips'), btnStart = document.getElementById('btn-start'), btnTips = document.getElementById('btn-tips');
     const btnCloseModal = document.getElementById('btn-close-modal'), btnCheck = document.getElementById('btn-check'), btnReset = document.getElementById('btn-reset');
     const btnAgain = document.getElementById('btn-again'), dragSource = document.getElementById('drag-source'), dropTargetsContainer = document.getElementById('drop-targets');
     const resultSummary = document.getElementById('result-summary'), courseSuggestions = document.getElementById('course-suggestions');
 
-    // Funções de Navegação e Setup
     function showView(view) {
         [viewStart, viewGame, viewResult].forEach(v => v.style.display = 'none');
         if (view) view.style.display = 'block';
@@ -265,65 +267,25 @@ document.addEventListener('DOMContentLoaded', () => {
             el.innerHTML = `<h4>${area.title}</h4>`;
             dropTargetsContainer.appendChild(el);
         });
-        addDragDropListeners();
-    }
-
-    function checkGame() {
-        let score = 0;
-        const targets = document.querySelectorAll('.drop-target');
-        const correctAreas = new Set();
-        btnCheck.disabled = true; // Desabilita o botão para evitar cliques duplos
-
-        targets.forEach(target => {
-            const areaId = target.dataset.area;
-            const itemsInside = target.querySelectorAll('.drag-item');
-            const h4 = target.querySelector('h4');
-            let allCorrect = itemsInside.length > 0;
-            
-            itemsInside.forEach(item => { if (item.dataset.target !== areaId) allCorrect = false; });
-            
-            if (allCorrect) {
-                target.classList.add('correct');
-                if(h4) h4.innerHTML += `<span>✔️</span>`;
-                score++;
-                correctAreas.add(areaId);
-            } else if (itemsInside.length > 0) {
-                target.classList.add('wrong');
-                if(h4) h4.innerHTML += `<span>❌</span>`;
-            }
-        });
         
-        setTimeout(() => showResult(score, correctAreas), 1000);
+        // Adiciona os listeners para ambas as plataformas
+        addDragDropListeners();
+        addTouchListeners(); // <-- NOVO
     }
 
-    function showResult(score, correctAreas) {
-        resultSummary.textContent = `Você classificou corretamente ${score} de ${Object.keys(AREAS).length} áreas!`;
-        courseSuggestions.innerHTML = '';
-        if (correctAreas.size > 0) {
-            correctAreas.forEach(areaId => {
-                const area = AREAS[areaId];
-                area.courses.forEach(course => {
-                    const chip = document.createElement('div');
-                    chip.className = 'course-chip';
-                    chip.textContent = course;
-                    chip.style.borderColor = area.color;
-                    chip.style.color = area.color;
-                    courseSuggestions.appendChild(chip);
-                });
-            });
-        } else {
-            courseSuggestions.innerHTML = `<p style="color:var(--muted)">Tente novamente para receber sugestões de cursos!</p>`;
-        }
-        showView(viewResult);
-    }
+    function checkGame() { /* ... (função inalterada) ... */ }
+    function showResult(score, correctAreas) { /* ... (função inalterada) ... */ }
 
+    // Função para arrastar e soltar no DESKTOP (mouse)
     function addDragDropListeners() {
         const draggables = document.querySelectorAll('.drag-item');
         const targets = document.querySelectorAll('.drop-target');
+        
         draggables.forEach(draggable => {
             draggable.addEventListener('dragstart', () => draggable.classList.add('dragging'));
             draggable.addEventListener('dragend', () => draggable.classList.remove('dragging'));
         });
+        
         targets.forEach(target => {
             target.addEventListener('dragover', e => { e.preventDefault(); target.classList.add('drag-over'); });
             target.addEventListener('dragleave', () => target.classList.remove('drag-over'));
@@ -331,22 +293,78 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 target.classList.remove('drag-over');
                 const draggingItem = document.querySelector('.dragging');
-                if(draggingItem) {
-                    // Impede que um item seja colocado dentro de outro item já existente na caixa
-                    if (e.target.classList.contains('drop-target')) {
-                        e.target.appendChild(draggingItem);
-                    }
+                if(draggingItem && e.target.classList.contains('drop-target')) {
+                    e.target.appendChild(draggingItem);
                 }
             });
         });
     }
 
-    function resetGame() {
-        btnCheck.disabled = false; // Reabilita o botão de conferir
-        showView(viewStart);
+    // ====================================================================
+    // NOVO: Funções para arrastar e soltar no MOBILE (toque)
+    // ====================================================================
+    function addTouchListeners() {
+        const draggables = document.querySelectorAll('.drag-item');
+        let currentDragging = null;
+
+        draggables.forEach(draggable => {
+            // Quando o usuário toca no item
+            draggable.addEventListener('touchstart', (e) => {
+                currentDragging = e.target;
+                currentDragging.classList.add('touch-dragging');
+
+                // Posiciona o item exatamente onde o dedo está
+                const touch = e.touches[0];
+                currentDragging.style.left = (touch.clientX - currentDragging.offsetWidth / 2) + 'px';
+                currentDragging.style.top = (touch.clientY - currentDragging.offsetHeight / 2) + 'px';
+            });
+        });
+
+        // Quando o usuário move o dedo pela tela
+        document.addEventListener('touchmove', (e) => {
+            if (currentDragging) {
+                e.preventDefault(); // Impede o scroll da página
+                const touch = e.touches[0];
+
+                // Atualiza a posição do item para seguir o dedo
+                currentDragging.style.left = (touch.clientX - currentDragging.offsetWidth / 2) + 'px';
+                currentDragging.style.top = (touch.clientY - currentDragging.offsetHeight / 2) + 'px';
+                
+                // Verifica qual 'alvo' está sob o dedo
+                const targetBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                document.querySelectorAll('.drop-target').forEach(t => t.classList.remove('drag-over'));
+
+                if (targetBelow && targetBelow.classList.contains('drop-target')) {
+                    targetBelow.classList.add('drag-over');
+                }
+            }
+        }, { passive: false }); // { passive: false } é necessário para o preventDefault funcionar
+
+        // Quando o usuário solta o dedo
+        document.addEventListener('touchend', (e) => {
+            if (currentDragging) {
+                const touch = e.changedTouches[0];
+                const targetBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+
+                // Se soltou sobre um alvo válido, anexa o item
+                if (targetBelow && targetBelow.classList.contains('drop-target')) {
+                    targetBelow.appendChild(currentDragging);
+                }
+
+                // Limpa os estilos e a referência ao item
+                currentDragging.classList.remove('touch-dragging');
+                currentDragging.style.left = '';
+                currentDragging.style.top = '';
+                currentDragging = null;
+                
+                document.querySelectorAll('.drop-target').forEach(t => t.classList.remove('drag-over'));
+            }
+        });
     }
 
-    // Event Listeners
+    function resetGame() { /* ... (função inalterada) ... */ }
+    
+    // Event Listeners (permanecem os mesmos)
     btnStart.addEventListener('click', () => { setupGame(); showView(viewGame); });
     btnTips.addEventListener('click', () => { modalTips.style.display = 'grid'; });
     btnCloseModal.addEventListener('click', () => { modalTips.style.display = 'none'; });
@@ -355,10 +373,13 @@ document.addEventListener('DOMContentLoaded', () => {
     btnReset.addEventListener('click', resetGame);
     btnAgain.addEventListener('click', resetGame);
 
-    // Inicia o App na tela inicial
     showView(viewStart);
+
+    // Mini-funções inalteradas para manter o código completo
+    function checkGame(){let e=0;const t=document.querySelectorAll(".drop-target"),o=new Set;btnCheck.disabled=!0,t.forEach(t=>{const n=t.dataset.area,r=t.querySelectorAll(".drag-item"),a=t.querySelector("h4");let d=r.length>0;r.forEach(e=>{e.dataset.target!==n&&(d=!1)}),d?(t.classList.add("correct"),a&&(a.innerHTML+='<span>✔️</span>'),e++,o.add(n)):r.length>0&&(t.classList.add("wrong"),a&&(a.innerHTML+='<span>❌</span>'))}),setTimeout(()=>showResult(e,o),1e3)}
+    function showResult(e,t){resultSummary.textContent=`Você classificou corretamente ${e} de ${Object.keys(AREAS).length} áreas!`,courseSuggestions.innerHTML="",t.size>0?t.forEach(e=>{const o=AREAS[e];o.courses.forEach(e=>{const t=document.createElement("div");t.className="course-chip",t.textContent=e,t.style.borderColor=o.color,t.style.color=o.color,courseSuggestions.appendChild(t)})}):courseSuggestions.innerHTML='<p style="color:var(--muted)">Tente novamente para receber sugestões de cursos!</p>',showView(viewResult)}
+    function resetGame(){btnCheck.disabled=!1,showView(viewStart)}
 });
 </script>
 </body>
-
 </html>
