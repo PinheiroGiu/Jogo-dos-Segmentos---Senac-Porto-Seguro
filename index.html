@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title> Jornada de Talentos: O Desafio dos Segmentos (Versão Estável) – Senac</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --card:#1e293b;
+      --muted:#94a3b8;
+      --text:#e5e7eb;
+      --radius: 18px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      
+      --gestao: #f97316;
+      --ti: #3b82f6;
+      --saude: #22c55e;
+      --beleza: #ec4899;
+      --turismo: #facc15;
+      --artes: #a855f7;
+      --bad: #ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background-color: var(--bg);
+      color: var(--text);
+      display:grid; place-items:center; padding:24px;
+    }
+    .app{width:100%; max-width:900px}
+    .card{
+        background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+        border:1px solid rgba(255,255,255,.1);
+        border-radius:var(--radius); padding:24px 32px;
+        box-shadow: var(--shadow);
+    }
+    .title{font-weight:800; line-height:1.1; font-size: clamp(24px, 3vw, 36px); text-align:center;}
+    .subtitle{color:var(--muted); font-size:clamp(14px,1.8vw,16px); text-align:center; margin-top:8px;}
+    .logo-senac{display:block; max-height: 45px; margin: 0 auto 24px auto;}
+
+    #view-start .start-options { display: flex; flex-direction: column; gap: 16px; margin-top: 32px; }
+    .btn {
+        appearance:none; border:none; padding:14px 20px; border-radius:12px;
+        cursor:pointer; font-weight:700; font-size:16px;
+        transition:.2s transform, .2s box-shadow;
+        color: white; width: 100%; text-shadow: 0 1px 3px rgba(0,0,0,.2);
+    }
+    .btn:hover{transform:translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,.2);}
+    .btn.start-game { background: var(--ti); }
+    .btn.show-tips { background: transparent; border: 2px solid var(--muted); color: var(--muted); }
+
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,.6); backdrop-filter: blur(5px);
+        display: none; place-items: center; z-index: 1000;
+    }
+    .modal-content {
+        background: var(--card); padding: 32px; border-radius: var(--radius);
+        width: 90%; max-width: 500px; border: 1px solid rgba(255,255,255,.1);
+    }
+    
+    #view-game { display: none; }
+    .game-container { display: flex; gap: 24px; margin-top: 24px; }
+    #drag-source {
+        width: 35%; padding: 16px; background: rgba(0,0,0,.2);
+        border-radius: 12px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .drag-item {
+        background: var(--card); color: var(--text); padding: 12px 16px;
+        border-radius: 8px; cursor: grab; border: 1px solid rgba(255,255,255,.1);
+        text-align: center; transition: .2s; user-select: none;
+        display: flex; align-items: center; justify-content: center; gap: 8px; font-size:15px;
+    }
+    .drag-item:hover { transform: scale(1.03); border-color: white; }
+    .drag-item.dragging { opacity: 0.5; cursor: grabbing; }
+
+    #drop-targets { width: 65%; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .drop-target {
+        /* Estilos base para todas as caixas de destino */
+        border: 2px dashed var(--muted);
+        border-radius: 12px; 
+        padding: 16px; 
+        min-height: 150px; /* Aumentei a altura mínima para a imagem aparecer melhor */
+        transition: background-color .3s, border-color .3s;
+        position: relative; /* Necessário para o overlay */
+        overflow: hidden; /* Garante que o overlay não vaze */
+        display: flex; /* Para centralizar o conteúdo */
+        flex-direction: column;
+        justify-content: center;
+        background-size: cover;
+        background-position: center;
+    }
+    
+    /* NOVO: Overlay para escurecer a imagem e garantir a leitura do texto */
+    .drop-target::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background-color: rgba(0, 0, 0, 0.5); /* Overlay preto com 50% de opacidade */
+        z-index: 1; /* Fica entre o fundo e o texto */
+    }
+
+    .drop-target h4 {
+        margin: 0; 
+        text-align: center; 
+        font-size: 18px; /* Aumentei a fonte para melhor leitura */
+        pointer-events: none;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        position: relative; /* Garante que o texto fique sobre o overlay */
+        z-index: 2;
+        color: white; /* Cor do texto branca para contrastar com o fundo */
+        text-shadow: 0 2px 4px rgba(0,0,0,0.7); /* Sombra para o texto */
+    }
+    .drop-target h4 span { font-size: 20px; }
+
+    /* NOVO: Imagens de fundo aplicadas a cada área específica */
+    #target-gestao  { background-image: url('gestao.png'); }
+    #target-ti      { background-image: url('ti.png'); }
+    #target-saude   { background-image: url('saude.png'); }
+    #target-beleza  { background-image: url('beleza.png'); }
+    #target-turismo { background-image: url('turismo.png'); }
+    #target-artes   { background-image: url('artes.png'); }
+
+    /* Estilos de feedback (drag-over, correct, wrong) */
+    .drop-target.drag-over { border-style: solid; }
+    #target-gestao.drag-over { border-color: var(--gestao); }
+    #target-ti.drag-over { border-color: var(--ti); }
+    #target-saude.drag-over { border-color: var(--saude); }
+    #target-beleza.drag-over { border-color: var(--beleza); }
+    #target-turismo.drag-over { border-color: var(--turismo); }
+    #target-artes.drag-over { border-color: var(--artes); }
+    
+    .drop-target.correct::before, .drop-target.wrong::before {
+        background-color: rgba(0, 0, 0, 0.3); /* Diminui o overlay no feedback */
+    }
+    .drop-target.correct { border: 3px solid var(--saude); background-color: rgba(34,197,94,.2); }
+    .drop-target.wrong { border: 3px solid var(--bad); background-color: rgba(239,68,68,.2); }
+
+
+    .game-controls { margin-top: 24px; display:flex; gap:12px; justify-content: flex-end; }
+    .btn-check { background: var(--saude); }
+    .btn-reset { background: transparent; border: 2px solid var(--muted); }
+    
+    #view-result { display: none; }
+    #result-summary { text-align: center; font-size: 18px; margin: 24px 0; }
+    #course-suggestions { display: flex; flex-wrap:wrap; gap:10px; justify-content: center; margin-top:20px;}
+    .course-chip { padding: 8px 14px; border-radius: 20px; font-size: 14px; border: 1px solid; }
+    
+    @media (max-width:768px){
+        .game-container { flex-direction: column; }
+        #drag-source, #drop-targets { width: 100%; }
+        #drop-targets { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    
+    <div class="card" id="view-start">
+      <img src="logo-senac.png" alt="Logo Senac" class="logo-senac">
+      <div class="title">Jornada de Talentos: O Desafio dos Segmentos</div>
+      <div class="subtitle">Arraste as atividades para as áreas de conhecimento corretas e descubra seu perfil!</div>
+      <div class="start-options">
+        <button class="btn start-game" id="btn-start">Começar o Desafio!</button>
+        <button class="btn show-tips" id="btn-tips">Como Jogar?</button>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-tips">
+        <div class="modal-content">
+            <h3>Como Jogar?</h3>
+            <p>É muito simples:</p>
+            <ul>
+                <li>Na esquerda, você verá uma lista de atividades.</li>
+                <li>Na direita, estarão as áreas de conhecimento do Senac.</li>
+                <li><strong>Clique e arraste</strong> cada atividade para dentro da caixa da área correspondente.</li>
+                <li>Quando terminar, clique em "Conferir" para ver seu resultado!</li>
+            </ul>
+            <button class="btn start-game" id="btn-close-modal">Entendi, vamos lá!</button>
+        </div>
+    </div>
+
+    <div class="card" id="view-game">
+        <div class="title">Organize as Atividades</div>
+        <div class="subtitle">Arraste cada item para sua respectiva área.</div>
+        <div class="game-container">
+            <div id="drag-source"></div>
+            <div id="drop-targets"></div>
+        </div>
+        <div class="game-controls">
+            <button class="btn btn-reset" id="btn-reset">Voltar ao Início</button>
+            <button class="btn btn-check" id="btn-check">Conferir</button>
+        </div>
+    </div>
+
+    <div class="card" id="view-result">
+      <div class="title">Seu Resultado</div>
+      <div id="result-summary"></div>
+      <div class="subtitle">Com base no seu desempenho, você parece ter afinidade com as seguintes áreas. Que tal explorar alguns cursos?</div>
+      <div id="course-suggestions"></div>
+       <div class="game-controls">
+            <button class="btn start-game" id="btn-again">Jogar Novamente</button>
+       </div>
+    </div>
+  </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const AREAS = {
+        gestao: { title: 'Gestão e Negócios', color: 'var(--gestao)', courses: ['Assistente Administrativo','Vendas','Empreendedorismo Digital'] },
+        ti: { title: 'Tecnologia da Informação', color: 'var(--ti)', courses: ['Lógica de Programação','Desenvolvedor Front-end','Cibersegurança'] },
+        saude: { title: 'Saúde', color: 'var(--saude)', courses: ['Primeiros Socorros','Cuidador de Idosos','Técnico em Enfermagem'] },
+        beleza: { title: 'Beleza e Estética', color: 'var(--beleza)', courses: ['Cabeleireiro','Maquiagem Profissional','Designer de Sobrancelhas'] },
+        turismo: { title: 'Turismo e Hospitalidade', color: 'var(--turismo)', courses: ['Recepcionista de Hotel','Organizador de Eventos','Garçom'] },
+        artes: { title: 'Artes e Design', color: 'var(--artes)', courses: ['Design Gráfico','Fotografia','Edição de Vídeo'] }
+    };
+
+    const GAME_ITEMS = [
+        { text: '📊 Organizar planilhas', target: 'gestao' }, { text: '💰 Controlar o caixa', target: 'gestao' }, { text: '🤝 Liderar uma equipe', target: 'gestao' },
+        { text: '💻 Criar um App', target: 'ti' }, { text: '🛡️ Proteger redes', target: 'ti' }, { text: '👨‍💻 Escrever código', target: 'ti' },
+        { text: '🩺 Aferir pressão arterial', target: 'saude' }, { text: '👵 Cuidar de um idoso', target: 'saude' }, { text: '💉 Aplicar uma injeção', target: 'saude' },
+        { text: '✂️ Fazer um corte de cabelo', target: 'beleza' }, { text: '💄 Fazer uma maquiagem', target: 'beleza' }, { text: '💅 Manicure e pedicure', target: 'beleza' },
+        { text: '🏨 Reservar um hotel', target: 'turismo' }, { text: '🗺️ Guiar turistas', target: 'turismo' }, { text: '🎉 Organizar um evento', target: 'turismo' },
+        { text: '🎨 Editar uma foto', target: 'artes' }, { text: '🖼️ Criar uma logomarca', target: 'artes' }, { text: '🎬 Gravar um vídeo', target: 'artes' }
+    ];
+
+    // Mapeamento de Elementos
+    const viewStart = document.getElementById('view-start'), viewGame = document.getElementById('view-game'), viewResult = document.getElementById('view-result');
+    const modalTips = document.getElementById('modal-tips'), btnStart = document.getElementById('btn-start'), btnTips = document.getElementById('btn-tips');
+    const btnCloseModal = document.getElementById('btn-close-modal'), btnCheck = document.getElementById('btn-check'), btnReset = document.getElementById('btn-reset');
+    const btnAgain = document.getElementById('btn-again'), dragSource = document.getElementById('drag-source'), dropTargetsContainer = document.getElementById('drop-targets');
+    const resultSummary = document.getElementById('result-summary'), courseSuggestions = document.getElementById('course-suggestions');
+
+    // Funções de Navegação e Setup
+    function showView(view) {
+        [viewStart, viewGame, viewResult].forEach(v => v.style.display = 'none');
+        if (view) view.style.display = 'block';
+    }
+
+    function setupGame() {
+        dragSource.innerHTML = '';
+        dropTargetsContainer.innerHTML = '';
+        const shuffledItems = [...GAME_ITEMS].sort(() => Math.random() - 0.5);
+        
+        shuffledItems.forEach((item, index) => {
+            const el = document.createElement('div');
+            el.className = 'drag-item';
+            el.textContent = item.text;
+            el.draggable = true;
+            el.id = `item-${index}`;
+            el.dataset.target = item.target;
+            dragSource.appendChild(el);
+        });
+
+        Object.keys(AREAS).forEach(key => {
+            const area = AREAS[key];
+            const el = document.createElement('div');
+            el.className = 'drop-target';
+            el.id = `target-${key}`;
+            el.dataset.area = key;
+            el.innerHTML = `<h4>${area.title}</h4>`;
+            dropTargetsContainer.appendChild(el);
+        });
+        addDragDropListeners();
+    }
+
+    function checkGame() {
+        let score = 0;
+        const targets = document.querySelectorAll('.drop-target');
+        const correctAreas = new Set();
+        btnCheck.disabled = true; // Desabilita o botão para evitar cliques duplos
+
+        targets.forEach(target => {
+            const areaId = target.dataset.area;
+            const itemsInside = target.querySelectorAll('.drag-item');
+            const h4 = target.querySelector('h4');
+            let allCorrect = itemsInside.length > 0;
+            
+            itemsInside.forEach(item => { if (item.dataset.target !== areaId) allCorrect = false; });
+            
+            if (allCorrect) {
+                target.classList.add('correct');
+                if(h4) h4.innerHTML += `<span>✔️</span>`;
+                score++;
+                correctAreas.add(areaId);
+            } else if (itemsInside.length > 0) {
+                target.classList.add('wrong');
+                if(h4) h4.innerHTML += `<span>❌</span>`;
+            }
+        });
+        
+        setTimeout(() => showResult(score, correctAreas), 1000);
+    }
+
+    function showResult(score, correctAreas) {
+        resultSummary.textContent = `Você classificou corretamente ${score} de ${Object.keys(AREAS).length} áreas!`;
+        courseSuggestions.innerHTML = '';
+        if (correctAreas.size > 0) {
+            correctAreas.forEach(areaId => {
+                const area = AREAS[areaId];
+                area.courses.forEach(course => {
+                    const chip = document.createElement('div');
+                    chip.className = 'course-chip';
+                    chip.textContent = course;
+                    chip.style.borderColor = area.color;
+                    chip.style.color = area.color;
+                    courseSuggestions.appendChild(chip);
+                });
+            });
+        } else {
+            courseSuggestions.innerHTML = `<p style="color:var(--muted)">Tente novamente para receber sugestões de cursos!</p>`;
+        }
+        showView(viewResult);
+    }
+
+    function addDragDropListeners() {
+        const draggables = document.querySelectorAll('.drag-item');
+        const targets = document.querySelectorAll('.drop-target');
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', () => draggable.classList.add('dragging'));
+            draggable.addEventListener('dragend', () => draggable.classList.remove('dragging'));
+        });
+        targets.forEach(target => {
+            target.addEventListener('dragover', e => { e.preventDefault(); target.classList.add('drag-over'); });
+            target.addEventListener('dragleave', () => target.classList.remove('drag-over'));
+            target.addEventListener('drop', e => {
+                e.preventDefault();
+                target.classList.remove('drag-over');
+                const draggingItem = document.querySelector('.dragging');
+                if(draggingItem) {
+                    // Impede que um item seja colocado dentro de outro item já existente na caixa
+                    if (e.target.classList.contains('drop-target')) {
+                        e.target.appendChild(draggingItem);
+                    }
+                }
+            });
+        });
+    }
+
+    function resetGame() {
+        btnCheck.disabled = false; // Reabilita o botão de conferir
+        showView(viewStart);
+    }
+
+    // Event Listeners
+    btnStart.addEventListener('click', () => { setupGame(); showView(viewGame); });
+    btnTips.addEventListener('click', () => { modalTips.style.display = 'grid'; });
+    btnCloseModal.addEventListener('click', () => { modalTips.style.display = 'none'; });
+    modalTips.addEventListener('click', (e) => { if (e.target === modalTips) modalTips.style.display = 'none'; });
+    btnCheck.addEventListener('click', checkGame);
+    btnReset.addEventListener('click', resetGame);
+    btnAgain.addEventListener('click', resetGame);
+
+    // Inicia o App na tela inicial
+    showView(viewStart);
+});
+</script>
+</body>
+</html>
