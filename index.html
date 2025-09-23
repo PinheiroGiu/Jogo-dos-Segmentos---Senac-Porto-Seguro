@@ -22,12 +22,17 @@
       --bad: #ef4444;
     }
     *{box-sizing:border-box}
-    html,body{height:100%; overflow: hidden;} /* Impede o scroll da página enquanto arrasta no mobile */
+    /* ALTERAÇÃO 1: 'overflow: hidden' removido para permitir scroll */
+    html,body{height:100%;}
     body{
       margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
       background-color: var(--bg);
       color: var(--text);
       display:grid; place-items:center; padding:24px;
+    }
+    /* ALTERAÇÃO 1: Classe para desativar o scroll SÓ durante o arrastar */
+    body.no-scroll {
+      overflow: hidden;
     }
     .app{width:100%; max-width:900px}
     .card{
@@ -66,6 +71,8 @@
     #drag-source {
         width: 35%; padding: 16px; background: rgba(0,0,0,.2);
         border-radius: 12px; display: flex; flex-direction: column; gap: 12px;
+        /* ALTERAÇÃO 2: Adicionando transição para feedback visual */
+        border: 2px dashed transparent; transition: border-color .3s;
     }
     .drag-item {
         background: var(--card); color: var(--text); padding: 12px 16px;
@@ -75,18 +82,16 @@
     }
     .drag-item:hover { transform: scale(1.03); border-color: white; }
     
-    /* NOVO: Estilo para o item sendo arrastado (tanto no mouse quanto no toque) */
     .drag-item.dragging {
         opacity: 0.5;
         cursor: grabbing;
     }
     
-    /* NOVO: Estilo específico para o item sendo arrastado com o dedo (touch) */
     .drag-item.touch-dragging {
-        position: fixed; /* Permite que o elemento flutue sobre a página */
-        z-index: 2000; /* Garante que fique na frente de tudo */
-        pointer-events: none; /* Impede que o próprio item interfira na detecção do 'alvo' abaixo dele */
-        transform: scale(1.05); /* Efeito de 'levantar' o item */
+        position: fixed;
+        z-index: 2000;
+        pointer-events: none;
+        transform: scale(1.05);
     }
 
     #drop-targets { width: 65%; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -100,7 +105,9 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start; /* Alinhado ao topo para melhor visualização */
+        align-items: center; /* Centraliza itens horizontalmente */
+        gap: 8px; /* Espaçamento entre itens soltos */
         background-size: cover;
         background-position: center;
     }
@@ -115,7 +122,7 @@
     }
 
     .drop-target h4 {
-        margin: 0; 
+        margin: 0 0 8px 0; 
         text-align: center; 
         font-size: 18px;
         pointer-events: none;
@@ -124,6 +131,7 @@
         z-index: 2;
         color: white;
         text-shadow: 0 2px 4px rgba(0,0,0,0.7);
+        width: 100%;
     }
     .drop-target h4 span { font-size: 20px; }
 
@@ -134,6 +142,8 @@
     #target-turismo { background-image: url('turismo.png'); }
     #target-artes   { background-image: url('artes.png'); }
 
+    /* ALTERAÇÃO 2: Estilo para a área inicial quando um item está sobre ela */
+    #drag-source.drag-over { border-color: var(--muted); }
     .drop-target.drag-over { border-style: solid; }
     #target-gestao.drag-over { border-color: var(--gestao); }
     #target-ti.drag-over { border-color: var(--ti); }
@@ -184,6 +194,7 @@
                 <li>Na esquerda, você verá uma lista de atividades.</li>
                 <li>Na direita, estarão as áreas de conhecimento do Senac.</li>
                 <li><strong>Clique e arraste</strong> (ou <strong>toque e arraste</strong> no celular) cada atividade para a caixa da área correspondente.</li>
+                <li>Você pode mover uma atividade de uma caixa para outra, ou de volta para a lista inicial.</li>
                 <li>Quando terminar, clique em "Conferir" para ver seu resultado!</li>
             </ul>
             <button class="btn start-game" id="btn-close-modal">Entendi, vamos lá!</button>
@@ -270,115 +281,173 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Adiciona os listeners para ambas as plataformas
         addDragDropListeners();
-        addTouchListeners(); // <-- NOVO
+        addTouchListeners();
     }
 
-    function checkGame() { /* ... (função inalterada) ... */ }
-    function showResult(score, correctAreas) { /* ... (função inalterada) ... */ }
-
-    // Função para arrastar e soltar no DESKTOP (mouse)
     function addDragDropListeners() {
-        const draggables = document.querySelectorAll('.drag-item');
-        const targets = document.querySelectorAll('.drop-target');
-        
-        draggables.forEach(draggable => {
-            draggable.addEventListener('dragstart', () => draggable.classList.add('dragging'));
-            draggable.addEventListener('dragend', () => draggable.classList.remove('dragging'));
+        // Seleciona todos os itens que podem ser arrastados a qualquer momento
+        document.getElementById('view-game').addEventListener('dragstart', (e) => {
+            if (e.target.classList.contains('drag-item')) {
+                e.target.classList.add('dragging');
+                document.body.classList.add('no-scroll');
+            }
         });
+
+        document.getElementById('view-game').addEventListener('dragend', (e) => {
+            if (e.target.classList.contains('drag-item')) {
+                e.target.classList.remove('dragging');
+                document.body.classList.remove('no-scroll');
+            }
+        });
+
+        const dropZones = document.querySelectorAll('.drop-target, #drag-source');
         
-        targets.forEach(target => {
-            target.addEventListener('dragover', e => { e.preventDefault(); target.classList.add('drag-over'); });
-            target.addEventListener('dragleave', () => target.classList.remove('drag-over'));
-            target.addEventListener('drop', e => {
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', e => {
                 e.preventDefault();
-                target.classList.remove('drag-over');
+                zone.classList.add('drag-over');
+            });
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('drag-over');
+            });
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
                 const draggingItem = document.querySelector('.dragging');
-                if(draggingItem && e.target.classList.contains('drop-target')) {
-                    e.target.appendChild(draggingItem);
+                if (draggingItem) {
+                    zone.appendChild(draggingItem);
                 }
             });
         });
     }
 
-    // ====================================================================
-    // NOVO: Funções para arrastar e soltar no MOBILE (toque)
-    // ====================================================================
     function addTouchListeners() {
-        const draggables = document.querySelectorAll('.drag-item');
         let currentDragging = null;
 
-        draggables.forEach(draggable => {
-            // Quando o usuário toca no item
-            draggable.addEventListener('touchstart', (e) => {
+        document.getElementById('view-game').addEventListener('touchstart', (e) => {
+            if (e.target.classList.contains('drag-item')) {
                 currentDragging = e.target;
+                
+                document.body.classList.add('no-scroll');
                 currentDragging.classList.add('touch-dragging');
 
-                // Posiciona o item exatamente onde o dedo está
                 const touch = e.touches[0];
                 currentDragging.style.left = (touch.clientX - currentDragging.offsetWidth / 2) + 'px';
                 currentDragging.style.top = (touch.clientY - currentDragging.offsetHeight / 2) + 'px';
-            });
-        });
+            }
+        }, { passive: true }); // Use passive: true para melhor performance no início do toque
 
-        // Quando o usuário move o dedo pela tela
         document.addEventListener('touchmove', (e) => {
             if (currentDragging) {
-                e.preventDefault(); // Impede o scroll da página
+                e.preventDefault();
                 const touch = e.touches[0];
 
-                // Atualiza a posição do item para seguir o dedo
                 currentDragging.style.left = (touch.clientX - currentDragging.offsetWidth / 2) + 'px';
                 currentDragging.style.top = (touch.clientY - currentDragging.offsetHeight / 2) + 'px';
                 
-                // Verifica qual 'alvo' está sob o dedo
-                const targetBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-                document.querySelectorAll('.drop-target').forEach(t => t.classList.remove('drag-over'));
+                currentDragging.style.display = 'none';
+                const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                currentDragging.style.display = '';
 
-                if (targetBelow && targetBelow.classList.contains('drop-target')) {
-                    targetBelow.classList.add('drag-over');
+                document.querySelectorAll('.drop-target, #drag-source').forEach(t => t.classList.remove('drag-over'));
+                
+                const dropZone = elementBelow ? elementBelow.closest('.drop-target, #drag-source') : null;
+                if (dropZone) {
+                    dropZone.classList.add('drag-over');
                 }
             }
-        }, { passive: false }); // { passive: false } é necessário para o preventDefault funcionar
+        }, { passive: false });
 
-        // Quando o usuário solta o dedo
         document.addEventListener('touchend', (e) => {
             if (currentDragging) {
+                document.body.classList.remove('no-scroll');
+                
+                currentDragging.style.display = 'none';
                 const touch = e.changedTouches[0];
-                const targetBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                currentDragging.style.display = '';
 
-                // Se soltou sobre um alvo válido, anexa o item
-                if (targetBelow && targetBelow.classList.contains('drop-target')) {
-                    targetBelow.appendChild(currentDragging);
+                const dropZone = elementBelow ? elementBelow.closest('.drop-target, #drag-source') : null;
+                if (dropZone) {
+                    dropZone.appendChild(currentDragging);
                 }
 
-                // Limpa os estilos e a referência ao item
                 currentDragging.classList.remove('touch-dragging');
                 currentDragging.style.left = '';
                 currentDragging.style.top = '';
                 currentDragging = null;
                 
-                document.querySelectorAll('.drop-target').forEach(t => t.classList.remove('drag-over'));
+                document.querySelectorAll('.drop-target, #drag-source').forEach(t => t.classList.remove('drag-over'));
             }
         });
     }
-
-    function resetGame() { /* ... (função inalterada) ... */ }
     
-    // Event Listeners (permanecem os mesmos)
-    btnStart.addEventListener('click', () => { setupGame(); showView(viewGame); });
+    // Event Listeners
+    btnStart.addEventListener('click', () => { showView(viewGame); setupGame(); });
     btnTips.addEventListener('click', () => { modalTips.style.display = 'grid'; });
     btnCloseModal.addEventListener('click', () => { modalTips.style.display = 'none'; });
     modalTips.addEventListener('click', (e) => { if (e.target === modalTips) modalTips.style.display = 'none'; });
     btnCheck.addEventListener('click', checkGame);
-    btnReset.addEventListener('click', resetGame);
-    btnAgain.addEventListener('click', resetGame);
+    btnReset.addEventListener('click', () => showView(viewStart));
+    btnAgain.addEventListener('click', () => showView(viewStart));
 
     showView(viewStart);
 
-    // Mini-funções inalteradas para manter o código completo
-    function checkGame(){let e=0;const t=document.querySelectorAll(".drop-target"),o=new Set;btnCheck.disabled=!0,t.forEach(t=>{const n=t.dataset.area,r=t.querySelectorAll(".drag-item"),a=t.querySelector("h4");let d=r.length>0;r.forEach(e=>{e.dataset.target!==n&&(d=!1)}),d?(t.classList.add("correct"),a&&(a.innerHTML+='<span>✔️</span>'),e++,o.add(n)):r.length>0&&(t.classList.add("wrong"),a&&(a.innerHTML+='<span>❌</span>'))}),setTimeout(()=>showResult(e,o),1e3)}
-    function showResult(e,t){resultSummary.textContent=`Você classificou corretamente ${e} de ${Object.keys(AREAS).length} áreas!`,courseSuggestions.innerHTML="",t.size>0?t.forEach(e=>{const o=AREAS[e];o.courses.forEach(e=>{const t=document.createElement("div");t.className="course-chip",t.textContent=e,t.style.borderColor=o.color,t.style.color=o.color,courseSuggestions.appendChild(t)})}):courseSuggestions.innerHTML='<p style="color:var(--muted)">Tente novamente para receber sugestões de cursos!</p>',showView(viewResult)}
-    function resetGame(){btnCheck.disabled=!1,showView(viewStart)}
+    function checkGame(){
+        let correctCount=0;
+        const targets=document.querySelectorAll(".drop-target");
+        const areasWithCorrects=new Set;
+        btnCheck.disabled=true;
+        targets.forEach(target=>{
+            const areaKey=target.dataset.area;
+            const items=target.querySelectorAll(".drag-item");
+            const title=target.querySelector("h4");
+            
+            // Limpa feedback anterior
+            title.innerHTML = AREAS[areaKey].title;
+            target.classList.remove('correct', 'wrong');
+
+            if(items.length === 0) return;
+
+            let allCorrectInTarget=true;
+            items.forEach(item=>{
+                if(item.dataset.target!==areaKey){
+                    allCorrectInTarget=false;
+                }
+            });
+            if(allCorrectInTarget){
+                target.classList.add("correct");
+                title.innerHTML+='<span> ✔️</span>';
+                correctCount++;
+                areasWithCorrects.add(areaKey)
+            } else {
+                target.classList.add("wrong");
+                title.innerHTML+='<span> ❌</span>'
+            }
+        });
+        setTimeout(()=>showResult(correctCount,areasWithCorrects),1500)
+    }
+    function showResult(score,correctAreas){
+        resultSummary.textContent=`Você classificou corretamente ${score} de ${Object.keys(AREAS).length} áreas!`;
+        courseSuggestions.innerHTML="";
+        if(correctAreas.size > 0){
+            correctAreas.forEach(areaKey=>{
+                const area=AREAS[areaKey];
+                area.courses.forEach(courseName=>{
+                    const chip=document.createElement("div");
+                    chip.className="course-chip";
+                    chip.textContent=courseName;
+                    chip.style.borderColor=area.color;
+                    chip.style.color=area.color;
+                    courseSuggestions.appendChild(chip)
+                })
+            })
+        } else {
+            courseSuggestions.innerHTML='<p style="color:var(--muted)">Tente novamente para receber sugestões de cursos!</p>'
+        }
+        showView(viewResult);
+        btnCheck.disabled=false;
+    }
 });
 </script>
 </body>
